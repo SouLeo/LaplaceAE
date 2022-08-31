@@ -516,7 +516,7 @@ def fit_lae(config):
     net = get_model(encoder, decoder).to(device)
     net.eval()
 
-    la = PosthocLaplace(net, approx = config["approximation"])
+    la = PosthocLaplace(net, approx = config["approximation"], classification=True)
     la.fit(train_loader)
     la.optimize_precision()
 
