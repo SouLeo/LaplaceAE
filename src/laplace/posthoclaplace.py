@@ -50,7 +50,7 @@ def optimize_prior_precision(mu_q, hessian, prior_prec, n_steps=100):
     
 
 class PosthocLaplace:
-    def __init__(self, net, approx):
+    def __init__(self, net, approx, classification):
         super(PosthocLaplace, self).__init__()
 
         self.device = "cuda:0" if torch.cuda.is_available() else "cpu"
@@ -63,7 +63,10 @@ class PosthocLaplace:
         for k in range(len(net)):
             self.net[k].register_forward_hook(fw_hook_get_latent)
 
-        self.HessianCalculator = lw.MseHessianCalculator(approx)
+        if classification:
+            self.HessianCalculator = lw.CrossEntropyHessianCalculator(approx)
+        else:
+            self.HessianCalculator = lw.MseHessianCalculator(approx)
 
     def fit(self, train_loader):
 
