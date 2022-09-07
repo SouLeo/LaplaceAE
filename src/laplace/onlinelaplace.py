@@ -154,12 +154,18 @@ class OnlineLaplace:
 
         return loss
 
-    def sample(self, n_samples = 100):
+    def sample(self, n_samples = 100, last_layer=False):
         sigma_q = self.laplace.posterior_scale(
             self.hessian, self.hessian_scale, self.prior_prec
         )
-        mu_q = parameters_to_vector(self.net.parameters()).unsqueeze(1)
-
+        
+        if last_layer:
+            param_list = list(self.net.parameters())
+            bias = parameters_to_vector(param_list[-1])
+            weights = parameters_to_vector(param_list[-2])
+            mu_q = torch.cat((bias, weights), 0)
+        else:
+            mu_q = parameters_to_vector(self.net.parameters()).unsqueeze(1)
         samples = self.laplace.sample(mu_q, sigma_q, n_samples)
 
         return samples
