@@ -48,6 +48,7 @@ class HessianCalculator:
     def __init__(self):
         super(HessianCalculator, self).__init__()
         self.device = "cuda:0" if torch.cuda.is_available() else "cpu"
+        self.last_layer = False
 
     @abstractmethod
     def compute_batch(self, *args, **kwargs):
@@ -186,7 +187,14 @@ class CrossEntropyHessianCalculator(HessianCalculator):
 
         H = []
         with torch.no_grad():
-            for k in range(len(net) - 1, -1, -1):
+            if self.last_layer:
+                start = len(net) - 1
+                end = len(net) - 2
+            else:
+                start = len(net) - 1
+                end = -1
+                
+            for k in range(start, end, -1):
 
                 if self.method == "mix":
                     prev_layer = net[k - 1] if k > 0 else None
