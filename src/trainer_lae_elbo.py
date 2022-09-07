@@ -185,7 +185,7 @@ class LitLaplaceAutoEncoder(pl.LightningModule):
             self.last_epoch_logged_val += 1
 
 
-def inference_on_dataset(net, samples, val_loader, latent_dim):
+def inference_on_dataset(net, samples, val_loader, latent_dim, last_layer):
     device = net[-1].weight.device
 
     z_i = []
@@ -209,7 +209,10 @@ def inference_on_dataset(net, samples, val_loader, latent_dim):
             for net_sample in samples:
 
                 # replace the network parameters with the sampled parameters
-                vector_to_parameters(net_sample, net.parameters())
+                if last_layer:
+                    vector_to_parameters(net_sample, list(net.parameters())[-2:])
+                else:
+                    vector_to_parameters(net_sample, net.parameters())
                 x_rec = net(xi)
 
                 if x_reci is None:
@@ -257,7 +260,7 @@ def inference_on_dataset(net, samples, val_loader, latent_dim):
     return x, z_mu, z_sigma, x_rec_mu, x_rec_sigma, labels, mse, likelihood
 
 
-def inference_on_latent_grid(net_original, samples, z_mu, latent_dim, dummy):
+def inference_on_latent_grid(net_original, samples, z_mu, latent_dim, dummy, last_layer):
 
     if z_mu.shape[1] != 2:
         return None, None, None, None
@@ -295,7 +298,10 @@ def inference_on_latent_grid(net_original, samples, z_mu, latent_dim, dummy):
             for net_sample in samples:
 
                 # replace the network parameters with the sampled parameters
-                vector_to_parameters(net_sample, net.parameters())
+                if last_layer:
+                    vector_to_parameters(net_sample, list(net.parameters())[-2:])
+                else:
+                    vector_to_parameters(net_sample, net.parameters())
                 x_rec = net(dummy).detach()
 
                 if pred is None:
@@ -350,7 +356,7 @@ def test_lae(config, batch_size=1):
 
     la = OnlineLaplace(net, len(val_loader.dataset), config, register_forward_hook=False)
     la.load_hessian(f"../weights/{path}/hessian.pth")
-    samples = la.sample(n_samples=config["test_samples"])
+    samples = la.sample(n_samples=config["test_samples"], last_layer=False)
 
     # evaluate on dataset
     (
@@ -362,7 +368,7 @@ def test_lae(config, batch_size=1):
         labels,
         mse,
         likelihood,
-    ) = inference_on_dataset(net, samples, val_loader, latent_dim)
+    ) = inference_on_dataset(net, samples, val_loader, latent_dim, last_layer=False)
     
     # evaluate on latent grid representation
     xg_mesh, yg_mesh, sigma_vector, n_points_axis = inference_on_latent_grid(
@@ -371,6 +377,7 @@ def test_lae(config, batch_size=1):
         z_mu,
         latent_dim,
         torch.zeros(*x.shape, device=device),
+        last_layer=False
     )
 
     # create figures
